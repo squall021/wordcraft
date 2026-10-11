@@ -29,11 +29,11 @@ jobs:
         run: |
           set -euo pipefail
           base="https://github.com/storytold/wordcraft/releases/download/v${VERSION}"
-          curl -fL --retry 3 -o wordcraft-web.zip "${base}/wordcraft-web-${VERSION}.zip"
+          curl -fL --retry 3 -o "wordcraft-web-${VERSION}.zip" "${base}/wordcraft-web-${VERSION}.zip"
           curl -fL --retry 3 -o SHA256SUMS.txt "${base}/SHA256SUMS.txt"
           grep -E "[[:space:]]\\*?wordcraft-web-${VERSION}\\.zip$" SHA256SUMS.txt | sha256sum --check --status
           mkdir -p unpack public
-          unzip -q wordcraft-web.zip -d unpack
+          unzip -q "wordcraft-web-${VERSION}.zip" -d unpack
           mapfile -t indices < <(find unpack -type f -name index.html)
           if [ "${#indices[@]}" -ne 1 ]; then
             echo "Expected exactly one index.html, found ${#indices[@]}"
