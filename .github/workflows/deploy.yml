@@ -1,0 +1,56 @@
+name: Deploy WordCraft Web
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/deploy.yml'
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Download verified release assets
+        env:
+          VERSION: '0.5.0'
+        run: |
+          set -euo pipefail
+          base="https://github.com/storytold/wordcraft/releases/download/v${VERSION}"
+          curl -fL --retry 3 -o wordcraft-web.zip "${base}/wordcraft-web-${VERSION}.zip"
+          curl -fL --retry 3 -o SHA256SUMS.txt "${base}/SHA256SUMS.txt"
+          grep -E "[[:space:]]\\*?wordcraft-web-${VERSION}\\.zip$" SHA256SUMS.txt | sha256sum --check --status
+          mkdir -p unpack public
+          unzip -q wordcraft-web.zip -d unpack
+          mapfile -t indices < <(find unpack -type f -name index.html)
+          if [ "${#indices[@]}" -ne 1 ]; then
+            echo "Expected exactly one index.html, found ${#indices[@]}"
+            exit 1
+          fi
+          site_dir="$(dirname "${indices[0]}")"
+          cp -a "${site_dir}/." public/
+          touch public/.nojekyll
+          test -s public/index.html
+          echo "Files prepared for deployment:"
+          du -sh public
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
